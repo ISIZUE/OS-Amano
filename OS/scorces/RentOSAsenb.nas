@@ -1,6 +1,8 @@
 ; hello-os
 ; TAB=4
 
+CYLS	EQU		10				;どこまで読み込むか
+
 		ORG		0x7c00			; このプログラムがどこに読み込まれるのか
 
 ; 以下は標準的なFAT12フォーマットフロッピーディスクのための記述
@@ -41,14 +43,37 @@ entry:
 		MOV		CH,0			;シリンダ0
 		MOV		DH,0			;ヘッド0
 		MOV		CL,2			;セクタ2
-
+readloop:
+		MOV		SI,0			;失敗回数を数えるレジスタ
+retry:
 		MOV		AH,0x02			;AH=0x02:ディスク読み込み
 		MOV		AL,1			;1セクタ
 		MOV		BX,0			
 		MOV		DL,0x00			;Aドライブ
 		INT		0x13			;ディスクBIOS呼び出し
-		JNC		error
-
+		JNC		next			;エラーが起きなければnextへ
+		ADD		SI,1			;SIに1を足す
+		CMP		SI,5			;SIと5を比較
+		JAE		error			;SI>=5だったらエラーへ
+		MOV		AH,0x00
+		MOV		DL,0x00			;Aドライブ
+		INT		0x13			;ドライブのリセット
+		JMP		retry
+next:
+		MOV		AX,ES			;アドレスを0x200進める
+		ADD		AX,0x0020
+		MOV		ES,AX			;ADD ES,0x020という命令がない
+		ADD		CL,1			;CLに1を足す
+		CMP		CL,18			;CLに18を比較
+		JBE		readloop		;CL<=18だったらreadloopへ
+		MOV		CL,1
+		ADD		DH,1
+		CMP		DH,2
+		JB		readloop		;DH<2だったらreadloopへ
+		MOV		DH,0
+		ADD		CH,1
+		CMP		CH,CYLS
+		JB		readloop		;CH<CYLSだったらreadloopへ
 fin:
 		HLT						; 何かあるまでCPUを停止させる
 		JMP		fin				; 無限ループ
