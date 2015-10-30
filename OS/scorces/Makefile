@@ -1,25 +1,31 @@
 TOOLPATH = ../z_tools/
-MAKE	= $(TOOLPATH)make.exe -r
-NASK	= $(TOOLPATH)nask.exe
-EDIMG	= $(TOOLPATH)edimg.exe
-IMGTOL	= $(TOOLPATH)imgtol.com
-COPY	= copy
-DEL	= del
+MAKE     = $(TOOLPATH)make.exe -r
+NASK     = $(TOOLPATH)nask.exe
+EDIMG    = $(TOOLPATH)edimg.exe
+IMGTOL   = $(TOOLPATH)imgtol.com
+COPY     = copy
+DEL      = del
 
-#デフォルト動作
+# デフォルト動作
+
 default :
 	$(MAKE) run
 
-RentOSAsenb.bin : RentOSAsenb.nas Makefile
-	$(NASK) RentOSAsenb.nas RentOSAsenb.bin RentOSAsenb.lst
+# ファイル生成規則
 
-RentOSAsenb.img : RentOSAsenb.bin Makefile
+ipl.bin : ipl.nas Makefile
+	$(NASK) ipl.nas ipl.bin ipl.lst
+
+RentOSAsenb.sys : RentOSAsenb.nas Makefile
+	$(NASK) RentOSAsenb.nas RentOSAsenb.sys RentOSAsenb.lst
+
+RentOSAsenb.img : ipl.bin RentOSAsenb.sys Makefile
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
-		wbinimg src:RentOSAsenb.bin len:512 from:0 to:0   imgout:RentOSAsenb.img
+		wbinimg src:ipl.bin len:512 from:0 to:0 \
+		copy from:RentOSAsenb.sys to:@: \
+		imgout:RentOSAsenb.img
 
-#コマンド
-asm :
-	$(MAKE) RentOSAsenb.bin
+# コマンド
 
 img :
 	$(MAKE) RentOSAsenb.img
@@ -34,9 +40,11 @@ install :
 	$(IMGTOL) w a: RentOSAsenb.img
 
 clean :
-	-$(DEL) RentOSAsenb.bin
+	-$(DEL) ipl.bin
+	-$(DEL) ipl.lst
+	-$(DEL) RentOSAsenb.sys
 	-$(DEL) RentOSAsenb.lst
 
-src_only:
+src_only :
 	$(MAKE) clean
 	-$(DEL) RentOSAsenb.img
